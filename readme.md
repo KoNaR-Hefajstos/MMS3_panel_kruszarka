@@ -2,9 +2,10 @@
 
 This application controls a crusher using an operator push-button panel.
 
-It have dual HAT configuration:
-1. **Slot 0 (Protocol HAT)**: A communications/protocol interface using a TCA9535PWR GPIO expander to manage control lines (OE, RS485 RE, Shutdown, status LEDs) for dual UARTs and SPI, alongside a dedicated UART virtual bridge. [MMS3 HAT Protocol Repository](https://github.com/KoNaR-Hefajstos/MMS3_hat_protocol)
-2. **Slot 1 (Expander HAT)**: A user-interface module featuring 5 LEDs and 5 pushbuttons mapped via a second TCA9535PWR expander over a virtual I2C bridge. [MMS3 Hat GPIO expander](https://github.com/KoNaR-Hefajstos/MMS3_hat_GPIO_board_basic)
+The stackup is as such:
+0. **MMS3 STM32F405**
+1. **Slot 0 Hat Protocol** https://github.com/KoNaR-Hefajstos/MMS3_hat_protocol
+2. **Slot 1 Hat GPIO Baisc**: https://github.com/KoNaR-Hefajstos/MMS3_hat_GPIO_board_basic
 
 
 ## Hardware Overview
@@ -43,3 +44,6 @@ It have dual HAT configuration:
 - **Rotation left**:        panel = D; GPIO:  button = PIN7,  led = PIN8
 - **Speed down**:           panel = E; GPIO:  button = PIN9,  led = PIN10
 
+### Connecting to hat protocol
+
+Connect cable from inverter to UART1
