@@ -1,0 +1,238 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+chainbus_i2c: &i2c2 {};
+chainbus_spi: &spi3 {};
+
+&usart3{
+    current-speed = <9600>;
+};
+
+
+/ {
+    aliases {
+        chainbus-led0 = &hat1_led0;
+        chainbus-led1 = &hat1_led1;
+        chainbus-led2 = &hat1_led2;
+        chainbus-led3 = &hat1_led3;
+        chainbus-led4 = &hat1_led4;
+
+        chainbus-button0 = &hat1_button0;
+        chainbus-button1 = &hat1_button1;
+        chainbus-button2 = &hat1_button2;
+        chainbus-button3 = &hat1_button3;
+        chainbus-button4 = &hat1_button4;
+    };
+    /* Parent Chainbus Hardware Controller */
+    chainbus0: chainbus {
+        compatible = "konar,mms-chainbus";
+        status = "okay";
+
+        /* 8 Slot Chip Select GPIOs (Adjust pin assignments for your board) */
+        cs-gpios = <&gpioc 9 GPIO_ACTIVE_LOW>,  /* Slot 0 */
+               <&gpiob 5 GPIO_ACTIVE_LOW>,  /* Slot 1 */
+               <&gpioa 7 GPIO_ACTIVE_LOW>,  /* Slot 2 */
+               <&gpioa 6 GPIO_ACTIVE_LOW>,  /* Slot 3 */
+               <&gpioa 5 GPIO_ACTIVE_LOW>,  /* Slot 4 */
+               <&gpioc 6 GPIO_ACTIVE_LOW>,  /* Slot 5 */
+               <&gpioc 7 GPIO_ACTIVE_LOW>,  /* Slot 6 */
+               <&gpioc 8 GPIO_ACTIVE_LOW>;  /* Slot 7 */
+
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        hat_protocol: hat0@0{
+            compatible = "konar,mms-hat";
+            reg = <0>;
+
+
+            slot0_i2c: i2c-bridge {
+                compatible = "konar,mms-hat-i2c-bridge";
+                i2c-bus = <&i2c2>; /* Physical I2C Controller */
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                expander0: gpio@20 {
+                    compatible = "nxp,pca9555";
+                    reg = <0x20>;
+                    gpio-controller;
+                    #gpio-cells = <2>;
+                    ngpios = <16>;
+                    status = "okay";
+                };
+            };
+
+
+            slot0_uart: uart-bridge{
+                compatible = "konar,mms-hat-uart-bridge";
+                uart-bus = <&usart3>;
+                current-speed = <9600>;
+            };
+
+                        /*
+             * TCA9535 GPIO pinout
+             *
+             * P00-P07 = GPIO 0-7
+             * P10-P17 = GPIO 8-15
+             */
+             
+            hat0_gpios {
+                compatible = "gpio-leds";
+
+                /* UART 1 */
+                
+                uart1_oe: uart1-oe {
+                    gpios = <&expander0 0 GPIO_ACTIVE_HIGH>;
+                    label = "uart1_oe";
+                };
+
+                uart1_rs485_re_n: uart1-rs485-re-n {
+                    gpios = <&expander0 1 GPIO_ACTIVE_LOW>;
+                    label = "uart1_rs485_re_n";
+                };
+
+                uart1_shdn_n: uart1-shdn-n {
+                    gpios = <&expander0 2 GPIO_ACTIVE_LOW>;
+                    label = "uart1_shdn_n";
+                };
+
+                uart1_bonus_out0: uart1-bonus-out0 {
+                    gpios = <&expander0 3 GPIO_ACTIVE_HIGH>;
+                    label = "uart1_bonus_out0";
+                };
+
+                uart1_bonus_out1: uart1-bonus-out1 {
+                    gpios = <&expander0 4 GPIO_ACTIVE_HIGH>;
+                    label = "uart1_bonus_out1";
+                };
+
+                status_led: status-led {
+                    gpios = <&expander0 5 GPIO_ACTIVE_HIGH>;
+                    label = "status_led";
+                };
+                
+
+                /* UART 2 */
+                
+                uart2_oe: uart2-oe {
+                    gpios = <&expander0 6 GPIO_ACTIVE_HIGH>;
+                    label = "uart2_oe";
+                };
+
+                uart2_rs485_re_n: uart2-rs485-re-n {
+                    gpios = <&expander0 7 GPIO_ACTIVE_LOW>;
+                    label = "uart2_rs485_re_n";
+                };
+
+                uart2_shdn_n: uart2-shdn-n {
+                    gpios = <&expander0 8 GPIO_ACTIVE_LOW>;
+                    label = "uart2_shdn_n";
+                };
+
+                uart2_bonus_out0: uart2-bonus-out0 {
+                    gpios = <&expander0 9 GPIO_ACTIVE_HIGH>;
+                    label = "uart2_bonus_out0";
+                };
+
+                uart2_bonus_out1: uart2-bonus-out1 {
+                    gpios = <&expander0 10 GPIO_ACTIVE_HIGH>;
+                    label = "uart2_bonus_out1";
+                };
+
+                /* SPI 1 */
+                spi1_enable: spi1-enable {
+                    gpios = <&expander0 11 GPIO_ACTIVE_HIGH>;
+                    label = "spi1_enable";
+                };
+
+                spi1_bonus_in0: spi1-bonus-in0 {
+                    gpios = <&expander0 12 GPIO_ACTIVE_HIGH>;
+                    label = "spi1_bonus_in0";
+                };
+
+                spi1_bonus_in1: spi1-bonus-in1 {
+                    gpios = <&expander0 13 GPIO_ACTIVE_HIGH>;
+                    label = "spi1_bonus_in1";
+                };
+
+                spi1_bonus_in2: spi1-bonus-in2 {
+                    gpios = <&expander0 14 GPIO_ACTIVE_HIGH>;
+                    label = "spi1_bonus_in2";
+                };
+
+                spi1_bonus_out: spi1-bonus-out {
+                    gpios = <&expander0 15 GPIO_ACTIVE_HIGH>;
+                    label = "spi1_bonus_out";
+                };
+            };
+            
+        };
+
+        hat_expander: hat1@1{
+            compatible = "konar,mms-hat";
+            reg = <1>;
+
+            slot1_i2c: i2c-bridge{
+                compatible = "konar,mms-hat-i2c-bridge";
+                i2c-bus = <&i2c2>;
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                expander1: gpio@20 {
+                    compatible = "nxp,pca9555";
+                    reg = <0x20>;
+                    gpio-controller;
+                    #gpio-cells = <2>;
+                    ngpios = <16>;
+                };
+            };
+
+            leds{
+                compatible = "gpio-leds";
+                hat1_led0: led_0{
+                    label = "LED 0";
+                    gpios = <&expander1 1 GPIO_ACTIVE_HIGH>;
+                };
+                hat1_led1: led_1{
+                    label = "LED 1";
+                    gpios = <&expander1 5 GPIO_ACTIVE_HIGH>;
+                };
+                hat1_led2: led_2{
+                    label = "LED 2";
+                    gpios = <&expander1 7 GPIO_ACTIVE_HIGH>;
+                };
+                hat1_led3: led_3{
+                    label = "LED 3";
+                    gpios = <&expander1 9 GPIO_ACTIVE_HIGH>;
+                };
+                hat1_led4: led_4{
+                    label = "LED 4";
+                    gpios = <&expander1 11 GPIO_ACTIVE_HIGH>;
+                };
+            };
+            buttons{
+                compatible = "gpio-keys";
+                hat1_button0: button_0{
+                    label = "BUTTON 0";
+                    gpios = <&expander1 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+                };
+                hat1_button1: button_1{
+                    label = "BUTTON 1";
+                    gpios = <&expander1 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+                };
+                hat1_button2: button_2{
+                    label = "BUTTON 2";
+                    gpios = <&expander1 6 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+                };
+                hat1_button3: button_3{
+                    label = "BUTTON 3";
+                    gpios = <&expander1 8 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+                };
+                hat1_button4: button_4{
+                    label = "BUTTON 4";
+                    gpios = <&expander1 10 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+                };
+            };
+
+        };
+
+    };
+};
