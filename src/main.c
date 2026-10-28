@@ -58,6 +58,12 @@ enum PanelPins{
     
 };
 
+enum CrusherMovement{
+    CRUSHER_MOVEMENT_STOP,
+    CRUSHER_MOVEMENT_LEFT,
+    CRUSHER_MOVEMENT_RIGHT
+};
+
 #define MIN_FREQUENCY 10.0f
 #define MAX_FREQUENCY 50.0f
 #define FREQUENCY_STEP 1.0f
@@ -111,15 +117,24 @@ const struct device *uart_dev = DEVICE_DT_GET(DT_NODELABEL(slot0_uart));
 
 
 iG5A inverter;
+enum CrusherMovement crusherMovement = CRUSHER_MOVEMENT_STOP; 
+
+#define DEBOUNCE_MS 50
+
+static int raw_button_state[CHAINBUS_BUTTON_COUNT] = {0};
+static int stable_button_state[CHAINBUS_BUTTON_COUNT] = {0};
+static int64_t button_change_time[CHAINBUS_BUTTON_COUNT] = {0};
 
 
 int init();
 void operatePanel();
+void read_buttons_debounced(int buttons[]);
 void increase_frequency(void);
 void decrease_frequency(void);
 void crusher_stop(void);
 void crusher_rotate_left(void);
 void crusher_rotate_right(void);
+void crusher_stop_when_rotating(void);
 
 int main(void)
 {
@@ -232,33 +247,58 @@ void operatePanel(){
     int64_t now = k_uptime_get();
     int buttons[5] = {0,0,0,0,0};
 
-        for(int i = 0; i < CHAINBUS_BUTTON_COUNT; i++){
-            buttons[i] = gpio_pin_get_dt(&chainbus_button[i]);
-            //LOG_INF("button %d= %d\n",i, buttons[i]);
-        }
+    read_buttons_debounced(buttons);
+
+    if (buttons[CRUSHER_STOP]) {
+        crusher_stop();
+        return;
+    }
+    if (now - last_frequency_change < FREQUENCY_REPEAT_MS) {
+        return;
+    }
 
 
-    if (now - last_frequency_change >= FREQUENCY_REPEAT_MS) {
-
-        if (buttons[CRUSHER_STOP]) {
-            crusher_stop();
-        }else if (buttons[CRUSHER_SPEED_UP]) {
-            increase_frequency();
-            last_frequency_change = now;
-        }else if (buttons[CRUSHER_SPEED_DOWN]) {
-            decrease_frequency();
-            last_frequency_change = now;
-        } else if (buttons[CRUSHER_ROTATE_LEFT]) {
-            crusher_rotate_left();
-            last_frequency_change = now;
-        }else if (buttons[CRUSHER_ROTATE_RIGHT]) {
-            crusher_rotate_right();
-            last_frequency_change = now;
-        }
+    if (buttons[CRUSHER_SPEED_UP]) {
+        increase_frequency();
+        last_frequency_change = now;
+    } else if (buttons[CRUSHER_SPEED_DOWN]) {
+        decrease_frequency();
+        last_frequency_change = now;
+    } else if (buttons[CRUSHER_ROTATE_LEFT]) {
+        crusher_rotate_left();
+        last_frequency_change = now;
+    } else if (buttons[CRUSHER_ROTATE_RIGHT]) {
+        crusher_rotate_right();
+        last_frequency_change = now;
     }
 }
 
+void read_buttons_debounced(int buttons[])
+{
+    int64_t now = k_uptime_get();
 
+    for (int i = 0; i < CHAINBUS_BUTTON_COUNT; i++) {
+
+        int raw = gpio_pin_get_dt(&chainbus_button[i]);
+
+        if (raw < 0) {
+            LOG_ERR("GPIO read error: button %d, error %d", i, raw);
+            buttons[i] = 0;
+            continue;
+        }
+
+        if (raw != raw_button_state[i]) {
+            raw_button_state[i] = raw;
+            button_change_time[i] = now;
+        }
+
+        if ((now - button_change_time[i]) >= DEBOUNCE_MS) {
+            stable_button_state[i] = raw_button_state[i];
+        }
+
+        buttons[i] = stable_button_state[i];
+    }
+}
 
 
 void increase_frequency(void)
@@ -271,7 +311,7 @@ void increase_frequency(void)
         }
 
 	    set_frequency(uart_dev, &inverter, (float)frequency);
-        LOG_INF("+ frequency: %d\n",frequency);
+        LOG_INF("+ frequency: %d",frequency);
     }
 }
 
@@ -285,7 +325,7 @@ void decrease_frequency(void)
         }
 
 	    set_frequency(uart_dev, &inverter, (float)frequency);
-        LOG_INF("- frequency: %d\n",frequency);
+        LOG_INF("- frequency: %d",frequency);
     }
 }
 
@@ -295,18 +335,66 @@ void decrease_frequency(void)
 void crusher_stop(void){
     LOG_INF("STOP");
     stop(uart_dev,&inverter);
-
+    crusherMovement = CRUSHER_MOVEMENT_STOP;
 }
 void crusher_rotate_left(void){
     LOG_INF("Rot left");
-    stop(uart_dev,&inverter);
-    k_sleep(K_SECONDS(10));
-    start(uart_dev, &inverter, true);
+    switch (crusherMovement) {
+        case CRUSHER_MOVEMENT_STOP:
+            start(uart_dev, &inverter, true);
+            crusherMovement = CRUSHER_MOVEMENT_LEFT;
+        break;
+        case CRUSHER_MOVEMENT_RIGHT:
+            // Make this in new thread
+            crusher_stop_when_rotating();
+            start(uart_dev, &inverter, true);
+            crusherMovement = CRUSHER_MOVEMENT_LEFT;
+        break;
+        case CRUSHER_MOVEMENT_LEFT:
+            crusherMovement = CRUSHER_MOVEMENT_LEFT;
+        break;
+        default:
+            LOG_ERR("Wrong crusherMovement");
+            stop(uart_dev,&inverter);
+            crusherMovement = CRUSHER_MOVEMENT_STOP;
+        break;
+    }
 }
 void crusher_rotate_right(void){
     LOG_INF("ROT right"); // Crushing
-    stop(uart_dev,&inverter);
-    k_sleep(K_SECONDS(10));
-    start(uart_dev, &inverter, false);
+    switch (crusherMovement) {
+        case CRUSHER_MOVEMENT_STOP:
+            start(uart_dev, &inverter, false);
+            crusherMovement = CRUSHER_MOVEMENT_RIGHT;
+        break;
+        case CRUSHER_MOVEMENT_LEFT:
+            // Make this in new thread
+            crusher_stop_when_rotating();
+            start(uart_dev, &inverter, false);
+            crusherMovement = CRUSHER_MOVEMENT_RIGHT;
+        break;
+        case CRUSHER_MOVEMENT_RIGHT:
+            crusherMovement = CRUSHER_MOVEMENT_RIGHT;
+        break;
+        default:
+            LOG_ERR("Wrong crusherMovement");
+            stop(uart_dev,&inverter);
+            crusherMovement = CRUSHER_MOVEMENT_STOP;
+        break;
+    }
+}
 
+void crusher_stop_when_rotating(void){
+    stop(uart_dev,&inverter);
+    if(frequency <= 10){
+        k_sleep(K_SECONDS(3));
+    }else if(frequency <= 20){
+        k_sleep(K_SECONDS(5));
+    }else if(frequency <= 30){
+        k_sleep(K_SECONDS(7));
+    }else if(frequency <= 40){
+        k_sleep(K_SECONDS(8));
+    }else if(frequency <= 50){
+        k_sleep(K_SECONDS(10));
+    }
 }
