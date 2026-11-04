@@ -8,9 +8,9 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/input/input.h>
 
-#include "iG5A.h"
 #include "zephyr/sleep.h"
 
+#include "drivers/inverter/ig5a.h" 
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
@@ -116,7 +116,8 @@ const static struct gpio_dt_spec expander_pinouts[] = {
 const struct device *uart_dev = DEVICE_DT_GET(DT_NODELABEL(slot0_uart));
 
 
-iG5A inverter;
+//iG5A inverter;
+const struct device *inverter = DEVICE_DT_GET(DT_NODELABEL(ig5a0));
 enum CrusherMovement crusherMovement = CRUSHER_MOVEMENT_STOP; 
 
 #define DEBOUNCE_MS 50
@@ -229,14 +230,24 @@ int init(){
     //gpio_pin_set_dt(&expander_pinouts[UART2_BONUS_OUT1], 1);
 
 
-
+/*
 	iG5A_init(&inverter, 0x01);
 	unlock(uart_dev,&inverter);
 	//start(uart_dev, &inverter, true);
     stop(uart_dev,&inverter);
 	set_frequency(uart_dev, &inverter, frequency);
 
+*/
 
+    if (!device_is_ready(inverter)) {
+        LOG_ERR("iG5A: device not ready\n");
+        return 0;
+    }
+
+    ig5a_unlock(inverter);
+    ig5a_unlock(inverter);
+    ig5a_stop(inverter);
+    ig5a_set_frequency(inverter, frequency);
 
 
     return 0;
@@ -310,7 +321,8 @@ void increase_frequency(void)
             frequency = MAX_FREQUENCY;
         }
 
-	    set_frequency(uart_dev, &inverter, (float)frequency);
+	    //set_frequency(uart_dev, &inverter, (float)frequency);
+        ig5a_set_frequency(inverter, (float)frequency);
         LOG_INF("+ frequency: %d",frequency);
     }
 }
@@ -324,7 +336,8 @@ void decrease_frequency(void)
             frequency = MIN_FREQUENCY;
         }
 
-	    set_frequency(uart_dev, &inverter, (float)frequency);
+	    //set_frequency(uart_dev, &inverter, (float)frequency);
+        ig5a_set_frequency(inverter, (float)frequency);
         LOG_INF("- frequency: %d",frequency);
     }
 }
@@ -334,20 +347,23 @@ void decrease_frequency(void)
 
 void crusher_stop(void){
     LOG_INF("STOP");
-    stop(uart_dev,&inverter);
+    //stop(uart_dev,&inverter);
+    ig5a_stop(inverter);
     crusherMovement = CRUSHER_MOVEMENT_STOP;
 }
 void crusher_rotate_left(void){
     LOG_INF("Rot left");
     switch (crusherMovement) {
         case CRUSHER_MOVEMENT_STOP:
-            start(uart_dev, &inverter, true);
+            //start(uart_dev, &inverter, true);
+            ig5a_start(inverter, true);
             crusherMovement = CRUSHER_MOVEMENT_LEFT;
         break;
         case CRUSHER_MOVEMENT_RIGHT:
             // Make this in new thread
             crusher_stop_when_rotating();
-            start(uart_dev, &inverter, true);
+            //start(uart_dev, &inverter, true);
+            ig5a_start(inverter, true);
             crusherMovement = CRUSHER_MOVEMENT_LEFT;
         break;
         case CRUSHER_MOVEMENT_LEFT:
@@ -355,7 +371,8 @@ void crusher_rotate_left(void){
         break;
         default:
             LOG_ERR("Wrong crusherMovement");
-            stop(uart_dev,&inverter);
+            //stop(uart_dev,&inverter);
+            ig5a_stop(inverter);
             crusherMovement = CRUSHER_MOVEMENT_STOP;
         break;
     }
@@ -364,13 +381,15 @@ void crusher_rotate_right(void){
     LOG_INF("ROT right"); // Crushing
     switch (crusherMovement) {
         case CRUSHER_MOVEMENT_STOP:
-            start(uart_dev, &inverter, false);
+            //start(uart_dev, &inverter, false);
+            ig5a_start(inverter, false);
             crusherMovement = CRUSHER_MOVEMENT_RIGHT;
         break;
         case CRUSHER_MOVEMENT_LEFT:
             // Make this in new thread
             crusher_stop_when_rotating();
-            start(uart_dev, &inverter, false);
+            //start(uart_dev, &inverter, false);
+            ig5a_start(inverter, false);
             crusherMovement = CRUSHER_MOVEMENT_RIGHT;
         break;
         case CRUSHER_MOVEMENT_RIGHT:
@@ -378,14 +397,16 @@ void crusher_rotate_right(void){
         break;
         default:
             LOG_ERR("Wrong crusherMovement");
-            stop(uart_dev,&inverter);
+            //stop(uart_dev,&inverter);
+            ig5a_stop(inverter);
             crusherMovement = CRUSHER_MOVEMENT_STOP;
         break;
     }
 }
 
 void crusher_stop_when_rotating(void){
-    stop(uart_dev,&inverter);
+    //stop(uart_dev,&inverter);
+    ig5a_stop(inverter);
     if(frequency <= 10){
         k_sleep(K_SECONDS(3));
     }else if(frequency <= 20){

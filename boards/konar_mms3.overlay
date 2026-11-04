@@ -21,6 +21,8 @@ chainbus_spi: &spi3 {};
         chainbus-button3 = &hat1_button3;
         chainbus-button4 = &hat1_button4;
     };
+
+
     /* Parent Chainbus Hardware Controller */
     chainbus0: chainbus {
         compatible = "konar,mms-chainbus";
@@ -65,6 +67,14 @@ chainbus_spi: &spi3 {};
                 compatible = "konar,mms-hat-uart-bridge";
                 uart-bus = <&usart3>;
                 current-speed = <9600>;
+
+
+                ig5a0: inverter {
+                    compatible = "ls,ig5a";
+                    uart = <&slot0_uart>;
+                    slave-address = <0x01>;
+                    status = "okay";
+                };
             };
 
                         /*
