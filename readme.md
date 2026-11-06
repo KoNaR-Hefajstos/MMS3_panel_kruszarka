@@ -3,6 +3,7 @@
 This application controls a crusher using an operator push-button panel.
 
 The stackup is as such:
+
 0. **MMS3 STM32F405**
 1. **Slot 0 Hat Protocol** https://github.com/KoNaR-Hefajstos/MMS3_hat_protocol
 2. **Slot 1 Hat GPIO Baisc**: https://github.com/KoNaR-Hefajstos/MMS3_hat_GPIO_board_basic
@@ -38,12 +39,15 @@ The stackup is as such:
 ---
 ### Connecting to panel
 
-- **Speed up**:             panel = A; GPIO:  button = PIN5,  led = PIN6
-- **Rotation right**:       panel = B; GPIO:  button = PIN1,  led = PIN2
-- **Stop**:                 panel = C; GPIO:  button = PIN11, led = PIN12
-- **Rotation left**:        panel = D; GPIO:  button = PIN7,  led = PIN8
-- **Speed down**:           panel = E; GPIO:  button = PIN9,  led = PIN10
+For using panel for crusher you need to connect buttons to hat 1 (Hat GPIO)
+
+| Function | Panel | Button (hat 1 GPIO) | LED (hat 1 GPIO) |
+| :--- | :---: | :---: | :---: |
+| **Speed up** | A | PIN5 | PIN6 |
+| **Rotation right** | B | PIN1 | PIN2 |
+| **Stop** | C | PIN11 | PIN12 |
+| **Rotation left** | D | PIN7 | PIN8 |
+| **Speed down** | E | PIN9 | PIN10 |
 
 ### Connecting to hat protocol
-
-Connect cable from inverter to UART1
+For communicating with inverter connect cable from inverter(S+,S-) to UART1 on hat 0 (Hat Protocol)
