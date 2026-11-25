@@ -135,7 +135,7 @@ void panel_thread(void *arg1, void *arg2, void *arg3)
 {
     while (1) {
         operatePanel();
-        k_sleep(K_MSEC(20));
+        k_sleep(K_MSEC(100));
     }
 }
 
